@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { NutritionData, AnalysisHistoryItem } from "./types";
+import { compressImage } from "./utils";
 import CameraCapture from "./components/CameraCapture";
 import DailySummary from "./components/DailySummary";
 import NutritionDisplay from "./components/NutritionDisplay";
@@ -98,7 +99,7 @@ export default function App() {
   const { calories: currentCalories, carbs: currentCarbs } = getTodayStatistics();
 
   // Handle uploading/reading image files
-  const processImageFile = (file: File) => {
+  const processImageFile = async (file: File) => {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
@@ -106,18 +107,34 @@ export default function App() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      // Extract the raw base64 sequence and mimetype
-      const mime = file.type;
-      const base64Data = result.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+    setApiError(null);
+
+    try {
+      // Scale down and compress any high-resolution device photos to ~150kb 
+      const { base64, mimeType } = await compressImage(file, 1200, 0.75);
+      setSelectedImage(base64);
+      setImageMimeType(mimeType);
+    } catch (err: any) {
+      console.warn("Optimized canvas compression failed, falling back to original file upload:", err);
       
-      setSelectedImage(base64Data);
-      setImageMimeType(mime);
-      setApiError(null);
-    };
-    reader.readAsDataURL(file);
+      // Fallback: Read raw file without canvas resizing
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        const mime = file.type;
+        const base64Data = result.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+        
+        setSelectedImage(base64Data);
+        setImageMimeType(mime);
+      };
+      reader.onerror = () => {
+        setApiError({
+          message: "Falha ao carregar o arquivo de imagem.",
+          details: "Ocorreu um erro ao tentar ler os bytes da imagem do dispositivo.",
+        });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
