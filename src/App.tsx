@@ -183,11 +183,11 @@ export default function App() {
 
       const resData = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || resData.success === false) {
         setApiError({
           message: resData.error || "Ocorreu um erro ao processar seu prato.",
           needsKey: resData.needsKey,
-          details: resData.details,
+          details: resData.details || resData.message,
         });
         setIsAnalyzing(false);
         return;

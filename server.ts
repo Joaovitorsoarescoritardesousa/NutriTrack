@@ -42,7 +42,10 @@ async function startServer() {
       const { image, mimeType, notes } = req.body;
 
       if (!image) {
-        return res.status(400).json({ error: "Por favor, envie uma foto do alimento." });
+        return res.json({ 
+          success: false, 
+          error: "Por favor, envie uma foto do alimento." 
+        });
       }
 
       // Check for Gemini API key first
@@ -51,9 +54,11 @@ async function startServer() {
         ai = getGeminiClient();
       } catch (err: any) {
         if (err.message === "GEMINI_API_KEY_MISSING") {
-          return res.status(401).json({
+          return res.json({
+            success: false,
             error: "A chave API do Gemini não foi encontrada no servidor.",
             needsKey: true,
+            details: "Por favor, configure sua chave GEMINI_API_KEY no menu Settings > Secrets no Google AI Studio.",
             message: "Por favor, configure sua chave GEMINI_API_KEY no menu Settings > Secrets no Google AI Studio."
           });
         }
@@ -160,17 +165,24 @@ Sempre responda em Português no formato JSON estruturado conforme o esquema def
         },
       });
 
-      const responseText = response.text;
+      let responseText = response.text;
       if (!responseText) {
         throw new Error("Não foi possível gerar dados de análise nutricional para a imagem fornecida.");
       }
 
-      const parsedNutrition = JSON.parse(responseText.trim());
+      // Strip markdown code block wrappers if modern SDK response has unexpected styling
+      responseText = responseText.trim();
+      if (responseText.startsWith("```")) {
+        responseText = responseText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      }
+
+      const parsedNutrition = JSON.parse(responseText);
       return res.json({ success: true, data: parsedNutrition });
 
     } catch (error: any) {
       console.error("Erro no processamento da imagem de nutrição:", error);
-      res.status(500).json({
+      res.json({
+        success: false,
         error: "Ocorreu um erro ao processar a imagem do alimento.",
         details: error.message || error,
       });
