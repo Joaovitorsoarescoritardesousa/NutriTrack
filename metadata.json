@@ -1,0 +1,10 @@
+{
+  "name": "Nutrition Image Processor",
+  "description": "Uma ferramenta simples e prática que analisa fotos de alimentos para estimar calorias, carboidratos, proteínas, gorduras e dados nutricionais usando IA.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
